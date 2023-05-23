@@ -16,7 +16,6 @@ var CreateNewToken = tx.Transaction{
 	Label:       "CriarToken",
 	Description: "Cria um novo token",
 	Method:      "POST",
-	Callers:     []string{"$org3MSP", "$orgMSP"}, // Only org3 can call this transaction
 
 	Args: []tx.Argument{
 		{
@@ -36,10 +35,9 @@ var CreateNewToken = tx.Transaction{
 		},
 		{
 			// Quantidade
-			Tag:          "quantidade",
-			Label:        "quantidade",
-			DefaultValue: 0,
-			DataType:     "number",
+			Tag:      "quantidade",
+			Label:    "quantidade",
+			DataType: "number",
 		},
 	},
 	Routine: func(stub *sw.StubWrapper, req map[string]interface{}) ([]byte, errors.ICCError) {
