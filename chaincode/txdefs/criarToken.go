@@ -25,7 +25,6 @@ var CreateNewToken = tx.Transaction{
 			Label:       "Id do token",
 			Description: "id do Token",
 			DataType:    "string",
-			Writers:     []string{`org2MSP`, "orgMSP"},
 		},
 		{
 			/// Reference to another asset
