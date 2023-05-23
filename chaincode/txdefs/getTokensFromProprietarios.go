@@ -30,7 +30,7 @@ var GetNumberOfTokensFromProprietario = tx.Transaction{
 
 		idProprietario, _ := req["proprietario"].(assets.Key)
 
-		// Prepare couchdb query
+		// Prepare query
 		query := map[string]interface{}{
 			"selector": map[string]interface{}{
 				"@assetType":   "token",
