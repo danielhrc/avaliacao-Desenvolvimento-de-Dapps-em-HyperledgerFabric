@@ -22,7 +22,6 @@ var CreateNewToken = tx.Transaction{
 		{
 
 			Required:    true,
-			IsKey:       true,
 			Tag:         "id",
 			Label:       "Id do token",
 			Description: "id do Token",

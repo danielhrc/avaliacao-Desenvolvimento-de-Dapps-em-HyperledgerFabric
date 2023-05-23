@@ -33,10 +33,9 @@ var Token = assets.AssetType{
 		},
 		{
 			// Burned
-			Tag:          "burned",
-			Label:        "burned",
-			DefaultValue: 0,
-			DataType:     "boolean",
+			Tag:      "burned",
+			Label:    "burned",
+			DataType: "boolean",
 		},
 	},
 }
