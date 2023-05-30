@@ -11,6 +11,6 @@ var txList = []tx.Transaction{
 	tx.UpdateAsset,
 	tx.DeleteAsset,
 	txdefs.CriarToken,
-	txdefs.ContabilidadeToken,
+	txdefs.GetNumberOfTokensFromProprietario,
 	txdefs.TransferirToken,
 }
