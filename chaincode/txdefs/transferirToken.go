@@ -11,7 +11,7 @@ import (
 
 // Create a new Library on channel
 // POST Method
-var TransferToken = tx.Transaction{
+var TransferirToken = tx.Transaction{
 	Tag:         "transferirToken",
 	Label:       "TransferirToken",
 	Description: "Transfere token",
@@ -38,11 +38,21 @@ var TransferToken = tx.Transaction{
 			Label:    "quantidade transferida",
 			DataType: "number",
 		},
+			// Id novo token
 		{
-			// Composite Key
-			Tag:      "id",
-			Label:    "Id do token",
-			DataType: "string",
+			Tag:         "id",
+			Label:       "ID Novo Token",
+			Description: "ID Novo Token",
+			DataType:    "string",
+			Required:    true,
+		},
+			// Id token origem 
+		{
+			Tag:         "novoId",
+			Label:       "Novo ID Token Origem",
+			Description: "Novo ID Token Origem",
+			DataType:    "string",
+			Required:    true,
 		},
 	},
 	Routine: func(stub *sw.StubWrapper, req map[string]interface{}) ([]byte, errors.ICCError) {
@@ -58,13 +68,13 @@ var TransferToken = tx.Transaction{
 			return nil, errors.WrapError(nil, "Parameter  must be an asset")
 		}
 
-		quantidade, ok := req["quantidade"].(json.Number)
+		quantidade, ok := req["quantidade"].(float64)
 
 		if !ok {
 			return nil, errors.WrapError(nil, "Parameter  must be an asset")
 		}
 
-		id, ok := req["id"].(json.Number)
+		id, ok := req["id"].(string)
 
 		if !ok {
 			return nil, errors.WrapError(nil, "Parameter  must be an asset")
@@ -75,46 +85,72 @@ var TransferToken = tx.Transaction{
 		if err != nil {
 			return nil, errors.WrapError(err, "failed to get asset from the ledger")
 		}
-
+		
+		novoId, _ := req["novoId"].(string)
+		
 		tokenMap := (map[string]interface{})(*tokenAsset)
-		tokenMap["@assetType"] = "Token"
-		tokenMap["token"] = tokenKey
-		tokenMap["id"] = id
-		tokenMap["proprietario"] = proprietario
-		tokenMap["quantidade"] = quantidade
-		tokenMap["burned"] = false
-
-		updateTokenKey := make(map[string]interface{})
-		updateTokenKey["@assetType"] = "token"
-		updateTokenKey["@key"] = tokenMap["@key"]
-
-		// Returns old token from channel
-		oldTokenAsset, err := tokenKey.Get(stub)
-		if err != nil {
-			return nil, errors.WrapError(err, "failed to get asset from the ledger")
+		
+		if tokenMap["burned"].(bool) {
+			return nil, errors.WrapError(err, "Already burned.")
 		}
-
-		oldTokenMap := (map[string]interface{})(*oldTokenAsset)
-		oldTokenMap["@assetType"] = "token"
-		oldTokenMap["@key"] = tokenKey
-
+		
 		// Update burned
-		oldTokenMap["burned"] = true
-
-		oldTokenMap, err = tokenAsset.Update(stub, oldTokenMap)
+		tokenMap["burned"] = true
+		
+		tokenMap, err = tokenAsset.Update(stub, tokenMap)
 		if err != nil {
-			return nil, errors.WrapError(err, "failed to update asset")
+			return nil, errors.WrapError(err, "Falha ao atualizar ativo 'token'.")
 		}
 
-		TokenAsset, err := assets.NewAsset(tokenMap)
+		novaQuantidade := tokenMap["quantidade"].(float64) - quantidade
+
+		if novaQuantidade < 0 {
+			return nil, errors.WrapError(err, "Saldo de token insuficiente.")
+		}
+
+		novoTokenOrigemMap := make(map[string]interface{})
+		novoTokenOrigemMap["@assetType"] = "token"
+		novoTokenOrigemMap["id"] = novoId
+		novoTokenOrigemMap["proprietario"] = tokenMap["proprietario"]
+		novoTokenOrigemMap["quantidade"] = novaQuantidade
+
+		novoTokenOrigemAsset, err := assets.NewAsset(novoTokenOrigemMap)
 		if err != nil {
-			return nil, errors.WrapError(err, "Failed to create a new asset")
+			return nil, errors.WrapError(err, "Falha ao criar ativo 'novo token de origem'.")
 		}
 
-		if tokenMap["quantidade"] == 0 {
-			return nil, errors.WrapError(err, "Quantidade não pode ser 0")
+		_, err = novoTokenOrigemAsset.PutNew(stub)
+		if err != nil {
+			return nil, errors.WrapError(err, "Erro ao salvar ativo 'novo token de origem' na blochchain.")
 		}
 
+		proprietarioKey, ok := req["destino"].(assets.Key)
+		if !ok {
+			return nil, errors.WrapError(nil, "Parametro 'destino' deve ser um ativo.")
+		}
+
+		proprietarioAsset, err := proprietarioKey.Get(stub)
+		if err != nil {
+			return nil, errors.WrapError(err, "Falha ao obter ativo 'destino'.")
+		}
+		proprietarioMap := (map[string]interface{})(*proprietarioAsset)
+
+		updatedProprietarioKey := make(map[string]interface{})
+		updatedProprietarioKey["@assetType"] = "proprietario"
+		updatedProprietarioKey["@key"] = proprietarioMap["@key"]
+
+		novoTokenMap := make(map[string]interface{})
+		novoTokenMap["@assetType"] = "token"
+		novoTokenMap["id"] = id
+		novoTokenMap["proprietario"] = updatedProprietarioKey
+		novoTokenMap["quantidade"] = quantidade
+		novoTokenMap["burned"] = false
+
+		novoTokenAsset, err := assets.NewAsset(novoTokenMap)
+		
+		if err != nil {
+			return nil, errors.WrapError(err, "Falha ao criar ativo 'token de destino'.")
+		}
 		// Save the new Token on channel
 		_, err = TokenAsset.PutNew(stub)
 		if err != nil {
